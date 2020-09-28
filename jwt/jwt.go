@@ -60,6 +60,15 @@ func Unmarshal(b []byte, payload interface{}, verifiers Verifiers) (string, erro
 	return UnmarshalWithHeader(b, payload, &header, verifiers)
 }
 
+func UnmarshalPayload(b []byte, payload interface{}) error {
+	token, err := parseTokenBuffer(b)
+	if err != nil {
+		return err
+	}
+
+	return unmarshalPayload(token.payloadSlice, payload)
+}
+
 func UnmarshalWithHeader(b []byte, payload interface{}, header Header, verifiers Verifiers) (string, error) {
 	token, err := parseTokenBuffer(b)
 	if err != nil {

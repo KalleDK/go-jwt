@@ -78,7 +78,7 @@ func verifytest() {
 }
 
 func genKeys() (crypto.PrivateKey, crypto.PublicKey) {
-	s := rand.NewSource(0)
+	s := rand.NewSource(1)
 	r := rand.New(s)
 	key, err := ecdsa.GenerateKey(elliptic.P256(), r)
 	if err != nil {
