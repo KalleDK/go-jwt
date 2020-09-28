@@ -20,17 +20,26 @@ const (
 	ES384
 	// ES512 ECDSA P-521 with SHA-512
 	ES512
+	RS256
+	RS384
+	RS512
 
 	maxAlgorithm
 )
 
-type Verifier struct {
+type Verifier interface {
+	Verify(a Algorithm, kidSuggest string, signed, signature []byte) (kidUsed string, err error)
+	Algorithm() Algorithm
+	KeyID() string
+}
+
+type verifier struct {
 	verifier jwa.Verifier
 	alg      Algorithm
 	kid      string
 }
 
-func (v Verifier) Verify(a Algorithm, kidSuggest string, signed, signature []byte) (kidUsed string, err error) {
+func (v verifier) Verify(a Algorithm, kidSuggest string, signed, signature []byte) (kidUsed string, err error) {
 	if a != v.alg {
 		return "", ErrInvalidSignature
 	}
@@ -42,35 +51,36 @@ func (v Verifier) Verify(a Algorithm, kidSuggest string, signed, signature []byt
 	return v.kid, nil
 }
 
-func (v Verifier) Algorithm() Algorithm {
+func (v verifier) Algorithm() Algorithm {
 	return v.alg
 }
 
-func (v Verifier) KeyID() string {
+func (v verifier) KeyID() string {
 	return v.kid
 }
 
-type Signer struct {
+type Signer interface {
+	Sign(rand io.Reader, unsigned []byte) (signature []byte, err error)
+	Algorithm() Algorithm
+	KeyID() string
+}
+
+type signer struct {
 	signer jwa.Signer
 	alg    Algorithm
 	kid    string
 }
 
-func (s Signer) Sign(rand io.Reader, unsigned []byte) (signature []byte, err error) {
+func (s signer) Sign(rand io.Reader, unsigned []byte) (signature []byte, err error) {
 	return s.signer.Sign(rand, unsigned)
 }
 
-func (s Signer) Algorithm() Algorithm {
+func (s signer) Algorithm() Algorithm {
 	return s.alg
 }
 
-func (s Signer) KeyID() string {
+func (s signer) KeyID() string {
 	return s.kid
-}
-
-type SignVerifier struct {
-	Signer
-	Verifier
 }
 
 var algorithms = make([]jwa.Algoritm, maxAlgorithm)
@@ -82,34 +92,21 @@ func RegisterAlgorithm(a Algorithm, alg jwa.Algoritm) {
 	algorithms[a] = alg
 }
 
-func (a Algorithm) NewVerifier(kid string, key crypto.PublicKey) Verifier {
+func (a Algorithm) NewVerifier(kid string, key crypto.PublicKey) verifier {
 	if a > 0 && a < maxAlgorithm {
 		f := algorithms[a]
 		if f != nil {
-			return Verifier{f.NewVerifier(key), a, kid}
+			return verifier{f.NewVerifier(key), a, kid}
 		}
 	}
 	panic("jwt: requested algorithm #" + strconv.Itoa(int(a)) + " is unavailable")
 }
 
-func (a Algorithm) NewSigner(kid string, key crypto.PrivateKey) Signer {
+func (a Algorithm) NewSigner(kid string, key crypto.PrivateKey) signer {
 	if a > 0 && a < maxAlgorithm {
 		f := algorithms[a]
 		if f != nil {
-			return Signer{f.NewSigner(key), a, kid}
-		}
-	}
-	panic("jwt: requested algorithm #" + strconv.Itoa(int(a)) + " is unavailable")
-}
-
-func (a Algorithm) NewSignVerifier(kid string, privkey crypto.PrivateKey, pubkey crypto.PublicKey) SignVerifier {
-	if a > 0 && a < maxAlgorithm {
-		f := algorithms[a]
-		if f != nil {
-			return SignVerifier{
-				Signer:   Signer{f.NewSigner(privkey), a, kid},
-				Verifier: Verifier{f.NewVerifier(pubkey), a, kid},
-			}
+			return signer{f.NewSigner(key), a, kid}
 		}
 	}
 	panic("jwt: requested algorithm #" + strconv.Itoa(int(a)) + " is unavailable")
@@ -132,6 +129,12 @@ func (a Algorithm) String() string {
 
 func (a Algorithm) SignatureSize() int {
 	switch a {
+	case RS256:
+		return 256 / 8
+	case RS384:
+		return 384 / 8
+	case RS512:
+		return 512 / 8
 	case ES512:
 		return 2 * ((521 + 7) / 8)
 	case ES256:
@@ -147,6 +150,12 @@ func (a Algorithm) SignatureSize() int {
 
 func GetAlgorithm(s string) Algorithm {
 	switch s {
+	case "RS256":
+		return RS256
+	case "RS384":
+		return RS384
+	case "RS512":
+		return RS512
 	case "ES512":
 		return ES512
 	case "ES256":

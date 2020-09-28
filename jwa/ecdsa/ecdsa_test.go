@@ -88,8 +88,8 @@ func Test_ECDSA_Verify(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			verifier := tt.args.alg.NewVerifier(tt.args.key)
-			if err := verifier.Verify(tt.args.data, tt.args.signature); (err != nil) != tt.wantErr {
+			verifier := tt.args.alg.NewVerifier("", tt.args.key)
+			if _, err := verifier.Verify(tt.args.alg, "", tt.args.data, tt.args.signature); (err != nil) != tt.wantErr {
 				t.Errorf("%s.Verify() error = %v, wantErr %v", tt.args.alg, err, tt.wantErr)
 			}
 		})
@@ -133,14 +133,14 @@ func Test_ECDSA_Sign(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := rand.NewSource(0)
 			r := rand.New(s)
-			signer := tt.args.alg.NewSigner(r, tt.args.privkey)
-			verifier := tt.args.alg.NewVerifier(tt.args.pubkey)
-			signature, err := signer.Sign(tt.args.data)
+			signer := tt.args.alg.NewSigner("", tt.args.privkey)
+			verifier := tt.args.alg.NewVerifier("", tt.args.pubkey)
+			signature, err := signer.Sign(r, tt.args.data)
 			if err != nil {
 				t.Errorf("%s.Sign() error = %v", tt.args.alg, err)
 				return
 			}
-			if err := verifier.Verify(tt.args.data, signature); (err != nil) != tt.wantErr {
+			if _, err := verifier.Verify(tt.args.alg, "", tt.args.data, signature); (err != nil) != tt.wantErr {
 				t.Errorf("%s.Verify() error = %v, wantErr %v", tt.args.alg, err, tt.wantErr)
 			}
 		})

@@ -109,7 +109,7 @@ func (e ESDSA) NewSigner(key crypto.PrivateKey) jwa.Signer {
 	}
 
 	if privkey.Params().Name != e.name {
-		panic("invalid key params: " + privkey.Params().Name)
+		panic("invalid key curve: " + privkey.Params().Name + " expected key curve to be " + e.name)
 	}
 
 	if !e.hash.Available() {
