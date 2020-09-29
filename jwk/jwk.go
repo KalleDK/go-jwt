@@ -3,9 +3,33 @@ package jwk
 import (
 	"encoding/json"
 	"errors"
+	"io"
 
+	"github.com/KalleDK/go-jwt/jwa"
 	"github.com/KalleDK/go-jwt/jwt"
 )
+
+type signer struct {
+	signer jwa.Signer
+	alg    jwt.Algorithm
+	kid    string
+}
+
+func (s signer) Sign(rand io.Reader, unsigned []byte) (signature []byte, err error) {
+	return s.signer.Sign(rand, unsigned)
+}
+
+func (s signer) Algorithm() jwt.Algorithm {
+	return s.alg
+}
+
+func (s signer) KeyID() string {
+	return s.kid
+}
+
+func (s signer) MarshalJSON() ([]byte, error) {
+	return nil, nil
+}
 
 type jwkheader struct {
 	KeyType string   `json:"kty"`
@@ -32,7 +56,7 @@ func ParseSigner(b []byte) (signer jwt.Signer, err error) {
 		return nil, errors.New("jwk is not a signer")
 	}
 
-	keytype := GetKeyType(header.KeyType)
+	keytype := jwt.GetKeyType(header.KeyType)
 
 	return keytype.ParseSigner(header.KeyID, b)
 }
@@ -47,7 +71,7 @@ func ParseVerifier(b []byte) (verifier jwt.Verifier, err error) {
 		return nil, errors.New("jwk is not a verifier")
 	}
 
-	keytype := GetKeyType(header.KeyType)
+	keytype := jwt.GetKeyType(header.KeyType)
 
 	return keytype.ParseVerifier(header.KeyID, b)
 }

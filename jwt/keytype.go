@@ -1,15 +1,13 @@
-package jwk
+package jwt
 
 import (
 	"errors"
 	"strconv"
-
-	"github.com/KalleDK/go-jwt/jwt"
 )
 
 type KeyParser interface {
-	ParseSigner(kid string, b []byte) (jwt.Signer, error)
-	ParseVerifier(kid string, b []byte) (jwt.Verifier, error)
+	ParseSigner(kid string, b []byte) (Signer, error)
+	ParseVerifier(kid string, b []byte) (Verifier, error)
 }
 
 type KeyType uint8
@@ -29,7 +27,7 @@ var keyTypes = make([]KeyParser, maxKeyTypes)
 
 func RegisterKeyType(k KeyType, p KeyParser) {
 	if k <= 0 || maxKeyTypes <= k {
-		panic("jwk: RegisterKeyType of unknown key type")
+		panic("jwt: RegisterKeyType of unknown key type")
 	}
 	keyTypes[k] = p
 }
@@ -41,10 +39,10 @@ func (k KeyType) getKeyParser() (p KeyParser, err error) {
 			return f, nil
 		}
 	}
-	return nil, errors.New("jwk: requested key type #" + strconv.Itoa(int(k)) + " is unavailable")
+	return nil, errors.New("jwt: requested key type #" + strconv.Itoa(int(k)) + " is unavailable")
 }
 
-func (k KeyType) ParseSigner(kid string, b []byte) (jwt.Signer, error) {
+func (k KeyType) ParseSigner(kid string, b []byte) (Signer, error) {
 	f, err := k.getKeyParser()
 	if err != nil {
 		return nil, err
@@ -53,7 +51,7 @@ func (k KeyType) ParseSigner(kid string, b []byte) (jwt.Signer, error) {
 	return f.ParseSigner(kid, b)
 }
 
-func (k KeyType) ParseVerifier(kid string, b []byte) (jwt.Verifier, error) {
+func (k KeyType) ParseVerifier(kid string, b []byte) (Verifier, error) {
 	f, err := k.getKeyParser()
 	if err != nil {
 		return nil, err

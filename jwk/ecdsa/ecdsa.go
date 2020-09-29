@@ -1,6 +1,7 @@
 package ecdsa
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/base64"
@@ -9,12 +10,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/KalleDK/go-jwt/jwk"
 	"github.com/KalleDK/go-jwt/jwt"
 )
 
 func init() {
-	jwk.RegisterKeyType(jwk.EC, keyparser{})
+	jwt.RegisterKeyType(jwt.EC, keyparser{})
 }
 
 func getCurveAndAlg(s string) (elliptic.Curve, jwt.Algorithm, error) {
@@ -26,12 +26,20 @@ func getCurveAndAlg(s string) (elliptic.Curve, jwt.Algorithm, error) {
 	}
 }
 
-type signer struct {
+type Signer struct {
+	hash    crypto.Hash
+	key     *ecdsa.PrivateKey
+	keySize uint8
+	alg     jwt.Algorithm
+	kid     string
+}
+
+type signerJSON struct {
 	Curve string `json:"crv"`
 	D     string `json:"d"`
 }
 
-type verifier struct {
+type verifierJSON struct {
 	Curve string `json:"crv"`
 	X     string `json:"x"`
 	Y     string `json:"y"`
@@ -52,7 +60,7 @@ func strtobig(s string) (i *big.Int) {
 }
 
 func (p keyparser) ParseVerifier(kid string, b []byte) (jwt.Verifier, error) {
-	var params verifier
+	var params verifierJSON
 	if err := json.Unmarshal(b, &params); err != nil {
 		return nil, err
 	}
@@ -82,7 +90,7 @@ func (p keyparser) ParseVerifier(kid string, b []byte) (jwt.Verifier, error) {
 }
 
 func (p keyparser) ParseSigner(kid string, b []byte) (jwt.Signer, error) {
-	var params signer
+	var params signerJSON
 	if err := json.Unmarshal(b, &params); err != nil {
 		return nil, err
 	}

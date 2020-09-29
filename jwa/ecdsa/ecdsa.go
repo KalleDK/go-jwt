@@ -140,3 +140,31 @@ func init() {
 	jwt.RegisterAlgorithm(jwt.ES384, NewES384())
 	jwt.RegisterAlgorithm(jwt.ES512, NewES512())
 }
+
+/*
+type EC256 struct{}
+
+const ec256Hash = crypto.SHA256
+const ec256KeySize = 32
+
+var ec256Curve = elliptic.P256()
+
+func (ec EC256) Sign(rand io.Reader, unsigned []byte, key *ecdsa.PrivateKey) (signature []byte, err error) {
+	sum := func() []byte {
+		hasher := ec256Hash.New()
+		hasher.Write(unsigned)
+		return hasher.Sum(nil)
+	}()
+
+	r, s, err := ecdsa.Sign(rand, key, sum)
+	if err != nil {
+		return nil, err
+	}
+
+	signature = make([]byte, ec256KeySize*2)
+	r.FillBytes(signature[:ec256KeySize])
+	s.FillBytes(signature[ec256KeySize:])
+	return signature, nil
+}
+
+*/

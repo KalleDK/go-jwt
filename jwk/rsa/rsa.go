@@ -8,12 +8,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/KalleDK/go-jwt/jwk"
 	"github.com/KalleDK/go-jwt/jwt"
 )
 
 func init() {
-	jwk.RegisterKeyType(jwk.RSA, keyparser{})
+	jwt.RegisterKeyType(jwt.RSA, keyparser{})
 }
 
 type verifier struct {
@@ -48,8 +47,8 @@ func strtobig(s string) (i *big.Int) {
 	return i
 }
 
-const UintSize = 32 << (^uint(0) >> 32 & 1) // 32 or 64
-const MaxInt = 1<<(UintSize-1) - 1
+const uintSize = 32 << (^uint(0) >> 32 & 1) // 32 or 64
+const maxInt = 1<<(uintSize-1) - 1
 
 func (p keyparser) ParseVerifier(kid string, b []byte) (jwt.Verifier, error) {
 	var params verifier
@@ -65,7 +64,7 @@ func (p keyparser) ParseVerifier(kid string, b []byte) (jwt.Verifier, error) {
 		return nil, errors.New("invalid E")
 	}
 	ei := eb.Int64()
-	if ei > MaxInt {
+	if ei > maxInt {
 		return nil, errors.New("invalid E")
 	}
 	e := int(ei)
@@ -88,6 +87,7 @@ func (p keyparser) ParseVerifier(kid string, b []byte) (jwt.Verifier, error) {
 func (kp keyparser) ParseSigner(kid string, b []byte) (jwt.Signer, error) {
 	var params signer
 	if err := json.Unmarshal(b, &params); err != nil {
+		fmt.Println("FLAF")
 		return nil, err
 	}
 

@@ -18,7 +18,7 @@ func TestKeyType_ParseSigner(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		k       KeyType
+		k       jwt.KeyType
 		args    args
 		want    jwt.Signer
 		wantErr bool
