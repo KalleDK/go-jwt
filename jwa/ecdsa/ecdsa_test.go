@@ -1,234 +1,88 @@
 package ecdsa
 
 import (
-	"bytes"
-	"crypto"
-	"crypto/x509"
-	"encoding/base64"
-	"encoding/pem"
-	"log"
-	"math/rand"
 	"testing"
 
+	_ "crypto/sha256"
+
+	"github.com/KalleDK/go-jwt/jwa/test"
 	"github.com/KalleDK/go-jwt/jwt"
 )
 
-func Test_ECDSA_Verify(t *testing.T) {
-	type args struct {
-		alg       jwt.Algorithm
-		key       crypto.PublicKey
-		data      []byte
-		signature []byte
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "ES512 Valid",
-			args: args{
-				alg:       jwt.ES512,
-				key:       getPubKey(ES512PubPEM),
-				data:      getSigned(ES512Token),
-				signature: getSignature(ES512Token),
-			},
-			wantErr: false,
-		},
-		{
-			name: "ES512 Invalid",
-			args: args{
-				alg:       jwt.ES512,
-				key:       getPubKey(ES512PubPEM),
-				data:      getSigned(ES512TokenInvalid),
-				signature: getSignature(ES512TokenInvalid),
-			},
-			wantErr: true,
-		},
-		{
-			name: "ES384 Valid",
-			args: args{
-				alg:       jwt.ES384,
-				key:       getPubKey(ES384PubPEM),
-				data:      getSigned(ES384Token),
-				signature: getSignature(ES384Token),
-			},
-			wantErr: false,
-		},
-		{
-			name: "ES384 Invalid",
-			args: args{
-				alg:       jwt.ES384,
-				key:       getPubKey(ES384PubPEM),
-				data:      getSigned(ES384TokenInvalid),
-				signature: getSignature(ES384TokenInvalid),
-			},
-			wantErr: true,
-		},
-		{
-			name: "ES256 Valid",
-			args: args{
-				alg:       jwt.ES256,
-				key:       getPubKey(ES256PubPEM),
-				data:      getSigned(ES256Token),
-				signature: getSignature(ES256Token),
-			},
-			wantErr: false,
-		},
-		{
-			name: "ES256 Invalid",
-			args: args{
-				alg:       jwt.ES256,
-				key:       getPubKey(ES256PubPEM),
-				data:      getSigned(ES256TokenInvalid),
-				signature: getSignature(ES256TokenInvalid),
-			},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			verifier := tt.args.alg.NewVerifier("", tt.args.key)
-			if _, err := verifier.Verify(tt.args.alg, "", tt.args.data, tt.args.signature); (err != nil) != tt.wantErr {
-				t.Errorf("%s.Verify() error = %v, wantErr %v", tt.args.alg, err, tt.wantErr)
-			}
-		})
-	}
-}
+const es256Pub = `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEVs/o5+uQbTjL3chynL4wXgUg2R9
+q9UU8I5mEovUf86QZ7kOBIjJwqnzD1omageEHWwHdBO6B+dFabmdT9POxg==
+-----END PUBLIC KEY-----`
 
-func Test_ECDSA_Sign(t *testing.T) {
-	type args struct {
-		alg     jwt.Algorithm
-		pubkey  crypto.PublicKey
-		privkey crypto.PrivateKey
-		data    []byte
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "ES256 Valid",
-			args: args{
-				alg:     jwt.ES256,
-				pubkey:  getPubKey(ES256PubPEM),
-				privkey: getPrivKey(ES256PrivPEM),
-				data:    getSigned(ES256Token),
-			},
-			wantErr: false,
-		},
-		{
-			name: "ES256 Invalid",
-			args: args{
-				alg:     jwt.ES256,
-				pubkey:  getPubKey(ES256PubPEMInvalid),
-				privkey: getPrivKey(ES256PrivPEM),
-				data:    getSigned(ES256Token),
-			},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := rand.NewSource(0)
-			r := rand.New(s)
-			signer := tt.args.alg.NewSigner("", tt.args.privkey)
-			verifier := tt.args.alg.NewVerifier("", tt.args.pubkey)
-			signature, err := signer.Sign(r, tt.args.data)
-			if err != nil {
-				t.Errorf("%s.Sign() error = %v", tt.args.alg, err)
-				return
-			}
-			if _, err := verifier.Verify(tt.args.alg, "", tt.args.data, signature); (err != nil) != tt.wantErr {
-				t.Errorf("%s.Verify() error = %v, wantErr %v", tt.args.alg, err, tt.wantErr)
-			}
-		})
-	}
-}
+const es256Priv = `-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgevZzL1gdAFr88hb2
+OF/2NxApJCzGCEDdfSp6VQO30hyhRANCAAQRWz+jn65BtOMvdyHKcvjBeBSDZH2r
+1RTwjmYSi9R/zpBnuQ4EiMnCqfMPWiZqB4QdbAd0E7oH50VpuZ1P087G
+-----END PRIVATE KEY-----`
 
-func getPubKey(data []byte) crypto.PublicKey {
-	block, _ := pem.Decode(data)
-	if block == nil || block.Type != "PUBLIC KEY" {
-		log.Fatal("failed to decode PEM block containing public key")
-	}
+const es384Pub = `-----BEGIN PUBLIC KEY-----
+MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEC1uWSXj2czCDwMTLWV5BFmwxdM6PX9p+
+Pk9Yf9rIf374m5XP1U8q79dBhLSIuaojsvOT39UUcPJROSD1FqYLued0rXiooIii
+1D3jaW6pmGVJFhodzC31cy5sfOYotrzF
+-----END PUBLIC KEY-----`
 
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		log.Fatal(err)
-	}
+const es384Priv = `-----BEGIN PRIVATE KEY-----
+MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDCAHpFQ62QnGCEvYh/p
+E9QmR1C9aLcDItRbslbmhen/h1tt8AyMhskeenT+rAyyPhGhZANiAAQLW5ZJePZz
+MIPAxMtZXkEWbDF0zo9f2n4+T1h/2sh/fviblc/VTyrv10GEtIi5qiOy85Pf1RRw
+8lE5IPUWpgu553SteKigiKLUPeNpbqmYZUkWGh3MLfVzLmx85ii2vMU=
+-----END PRIVATE KEY-----`
 
-	return pub
-}
-
-func getPrivKey(data []byte) crypto.PrivateKey {
-	block, _ := pem.Decode(data)
-	if block == nil || block.Type != "PRIVATE KEY" {
-		log.Fatal("failed to decode PEM block containing private key")
-	}
-
-	priv, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return priv
-}
-
-func getSignature(data []byte) []byte {
-	idx := bytes.LastIndex(data, []byte{'.'})
-	return decodeSegment(data[idx+1:])
-}
-
-func getSigned(data []byte) []byte {
-	idx := bytes.LastIndex(data, []byte{'.'})
-	return data[:idx]
-}
-
-func decodeSegment(data []byte) []byte {
-	m := base64.RawURLEncoding.DecodedLen(len(data))
-	b := make([]byte, m)
-	n, err := base64.RawURLEncoding.Decode(b, data)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return b[:n]
-}
-
-var ES512PubPEM = []byte(`-----BEGIN PUBLIC KEY-----
+const es512Pub = `-----BEGIN PUBLIC KEY-----
 MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQBgc4HZz+/fBbC7lmEww0AO3NK9wVZ
 PDZ0VEnsaUFLEYpTzb90nITtJUcPUbvOsdZIZ1Q8fnbquAYgxXL5UgHMoywAib47
 6MkyyYgPk0BXZq3mq4zImTRNuaU9slj9TVJ3ScT3L1bXwVuPJDzpr5GOFpaj+WwM
 Al8G7CqwoJOsW7Kddns=
------END PUBLIC KEY-----`)
+-----END PUBLIC KEY-----`
 
-var ES512Token = []byte(`eyJhbGciOiJFUzUxMiIsInR5cCI6IkpXVCIsImtpZCI6InhaRGZacHJ5NFA5dlpQWnlHMmZOQlJqLTdMejVvbVZkbTd0SG9DZ1NOZlkifQ.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.AP_CIMClixc5-BFflmjyh_bRrkloEvwzn8IaWJFfMz13X76PGWF0XFuhjJUjp7EYnSAgtjJ-7iJG4IP7w3zGTBk_AUdmvRCiWp5YAe8S_Hcs8e3gkeYoOxiXFZlSSAx0GfwW1cZ0r67mwGtso1I3VXGkSjH5J0Rk6809bn25GoGRjOPu`)
-var ES512TokenInvalid = []byte(`ayJhbGciOiJFUzUxMiIsInR5cCI6IkpXVCIsImtpZCI6InhaRGZacHJ5NFA5dlpQWnlHMmZOQlJqLTdMejVvbVZkbTd0SG9DZ1NOZlkifQ.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.AP_CIMClixc5-BFflmjyh_bRrkloEvwzn8IaWJFfMz13X76PGWF0XFuhjJUjp7EYnSAgtjJ-7iJG4IP7w3zGTBk_AUdmvRCiWp5YAe8S_Hcs8e3gkeYoOxiXFZlSSAx0GfwW1cZ0r67mwGtso1I3VXGkSjH5J0Rk6809bn25GoGRjOPu`)
+const es512Priv = `-----BEGIN PRIVATE KEY-----
+MIHuAgEAMBAGByqGSM49AgEGBSuBBAAjBIHWMIHTAgEBBEIBiyAa7aRHFDCh2qga
+9sTUGINE5jHAFnmM8xWeT/uni5I4tNqhV5Xx0pDrmCV9mbroFtfEa0XVfKuMAxxf
+Z6LM/yKhgYkDgYYABAGBzgdnP798FsLuWYTDDQA7c0r3BVk8NnRUSexpQUsRilPN
+v3SchO0lRw9Ru86x1khnVDx+duq4BiDFcvlSAcyjLACJvjvoyTLJiA+TQFdmrear
+jMiZNE25pT2yWP1NUndJxPcvVtfBW48kPOmvkY4WlqP5bAwCXwbsKrCgk6xbsp12
+ew==
+-----END PRIVATE KEY-----`
 
-var ES384PubPEM = []byte(`-----BEGIN PUBLIC KEY-----
-MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEC1uWSXj2czCDwMTLWV5BFmwxdM6PX9p+
-Pk9Yf9rIf374m5XP1U8q79dBhLSIuaojsvOT39UUcPJROSD1FqYLued0rXiooIii
-1D3jaW6pmGVJFhodzC31cy5sfOYotrzF
------END PUBLIC KEY-----`)
+func Test_ECDSA(t *testing.T) {
 
-var ES384Token = []byte(`eyJhbGciOiJFUzM4NCIsInR5cCI6IkpXVCIsImtpZCI6ImlUcVhYSTB6YkFuSkNLRGFvYmZoa00xZi02ck1TcFRmeVpNUnBfMnRLSTgifQ.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.cJOP_w-hBqnyTsBm3T6lOE5WpcHaAkLuQGAs1QO-lg2eWs8yyGW8p9WagGjxgvx7h9X72H7pXmXqej3GdlVbFmhuzj45A9SXDOAHZ7bJXwM1VidcPi7ZcrsMSCtP1hiN`)
-var ES384TokenInvalid = []byte(`ayJhbGciOiJFUzM4NCIsInR5cCI6IkpXVCIsImtpZCI6ImlUcVhYSTB6YkFuSkNLRGFvYmZoa00xZi02ck1TcFRmeVpNUnBfMnRLSTgifQ.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.cJOP_w-hBqnyTsBm3T6lOE5WpcHaAkLuQGAs1QO-lg2eWs8yyGW8p9WagGjxgvx7h9X72H7pXmXqej3GdlVbFmhuzj45A9SXDOAHZ7bJXwM1VidcPi7ZcrsMSCtP1hiN`)
+	fixtures := test.JWAFixtures{
+		jwt.ES256: {
+			Public:  es256Pub,
+			Private: es256Priv,
+			Header:  `eyJhbGciOiJFUzI1NiJ9`,
+			Signatures: map[string]string{
+				"Short":  `pYvhcg4aluUvhsOBbeLr8h71uotrvnZSVJOzY0WetOGxc1o5tbuH4RATxsiNIX7H7C6vv4yfBI5Soc9xYQg85w`,
+				"Medium": `rjgllxIZlNJTWYkImHYbbNP5QOvCh7AaYZKVYu9vOPiD4e9TwIxU3Zko8awjomMSBHhtRosi6sQHBngy9CQk3g`,
+				"Long":   `kSw_kKJycXssa2fD15VgB84dmwwx54WOqFDbAD8vBLBdxfaftKFEOu__ZdrNefQ3FepBATYiZIokCV9nXGJKnQ`,
+			},
+		},
+		jwt.ES384: {
+			Public:  es384Pub,
+			Private: es384Priv,
+			Header:  `eyJhbGciOiJFUzM4NCJ9`,
+			Signatures: map[string]string{
+				"Short":  `sA7Louzt7HnRbRqiPIdFNrQWE4pqBPK-bcFO3w6pQ0GyM5pyWLic9C0lLvYESiQR1cVxxpmIjdAkUD34PJdwdfYfDcXnoe-1WN7qIU-IUhz2Ry6P0Ai8WmOp5RdBROZK`,
+				"Medium": `u7iKd_YWUx3zKkeQ3T98v56Kk7DddKkftvaDyHZVNhAZOldSzYQkwqeehMmTNv6Yp7vo5MuHuK0hEJdpCfWiF_QkeHfAQdjyt80bKvSNYxOj_sWjeE8EyidQvP1YEseT`,
+				"Long":   `9nMVCNm6BAy-QECHMtKu3zoTtKBdKeP8EYeqkepgQWpRnfnm9RV9URa7kvgySwXE0CJ6TUiCzuKW6CCNrXEi1x2CDkbM5Ek73eg5xTzHgm7OYvOp1XPbPQqSCa0aFwTI`,
+			},
+		},
+		jwt.ES512: {
+			Public:  es512Pub,
+			Private: es512Priv,
+			Header:  `eyJhbGciOiJFUzUxMiJ9`,
+			Signatures: map[string]string{
+				"Short":  `Ac4dmwcyLYubIRtNXdMxolV2SU7IJaWss7DSYLAQmxqT1GRzlWDEkWRtKAzuE9GE2XJYmVZU5DFJEFIO8deCv1luATubU74u_CmvVK1se_JzVo2ANOeXVsT4OkCohNPMxM8hhE6LrESG3Bsd-wGGJqYud9BEl8GlJ330pO3FodHXeiZf`,
+				"Medium": `AHWYz2lN_7pmZGFcvt4lQJs5fZsXg69PEhfTqfr5W0xEqcYzhBl_F-6sbhXM86lade_Nb30ywrzTWqrMvI82od0gABbCDEGTZR-r7gcjfR49mkhstk0PmOk-PfjTugVtpLzLgwVbNuhWi_fARxBXtjwS5fUuOruA3ZytoPJzZiiNrw9V`,
+				"Long":   `ARMG8rJ4H2I3DlY5BYaCV3np5w6J4nbU1fzH1bZEDGzk_inPBeE2eZQEBgfrdbqNcQTEUk4U4NTvseYD-g-PB_uTAU85aE3wVXgPKQXFvvsVa-A0Vui9fgupk-C1cL5_A--dWVYL1OCS-kiZoE-EW0GCJc7H0ygr8K8mOfzk6U8537Zj`,
+			},
+		},
+	}
 
-var ES256PubPEM = []byte(`-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEVs/o5+uQbTjL3chynL4wXgUg2R9
-q9UU8I5mEovUf86QZ7kOBIjJwqnzD1omageEHWwHdBO6B+dFabmdT9POxg==
------END PUBLIC KEY-----`)
-
-var ES256PubPEMInvalid = []byte(`-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENsSF+IPaz7NjyPZNaoLlZT19NmQr
-OhCLUVVajTNAfVxpyVIhT85D6l+AQxC75j4N7svx6bppXax3U7ExvL/zmA==
------END PUBLIC KEY-----`)
-
-var ES256PrivPEM = []byte(`-----BEGIN PRIVATE KEY-----
-MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgevZzL1gdAFr88hb2
-OF/2NxApJCzGCEDdfSp6VQO30hyhRANCAAQRWz+jn65BtOMvdyHKcvjBeBSDZH2r
-1RTwjmYSi9R/zpBnuQ4EiMnCqfMPWiZqB4QdbAd0E7oH50VpuZ1P087G
------END PRIVATE KEY-----`)
-
-var ES256Token = []byte(`eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.tyh-VfuzIxCyGYDlkBA7DfyjrqmSHu6pQ2hoZuFqUSLPNY2N0mpHb3nk5K17HWP_3cYHBw7AhHale5wky6-sVA`)
-var ES256TokenInvalid = []byte(`ayJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.tyh-VfuzIxCyGYDlkBA7DfyjrqmSHu6pQ2hoZuFqUSLPNY2N0mpHb3nk5K17HWP_3cYHBw7AhHale5wky6-sVA`)
+	test.TestFixtures(t, fixtures)
+}

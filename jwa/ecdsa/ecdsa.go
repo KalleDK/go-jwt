@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"errors"
+	"hash"
 	"io"
 	"math/big"
 	"strconv"
@@ -139,6 +140,142 @@ func init() {
 	jwt.RegisterAlgorithm(jwt.ES256, NewES256())
 	jwt.RegisterAlgorithm(jwt.ES384, NewES384())
 	jwt.RegisterAlgorithm(jwt.ES512, NewES512())
+	jwt.RegisterJWA(jwt.ES256, NewES256A, AvailableES256)
+	jwt.RegisterJWA(jwt.ES384, NewES384A, AvailableES384)
+	jwt.RegisterJWA(jwt.ES512, NewES512A, AvailableES512)
+}
+
+func packSignature(r, s *big.Int, keySize int) (signature []byte, err error) {
+	signature = make([]byte, keySize*2)
+	r.FillBytes(signature[:keySize])
+	s.FillBytes(signature[keySize:])
+	return signature, nil
+}
+
+func unpackSignature(signature []byte, keySize int) (r, s *big.Int, err error) {
+	if len(signature) != int(2*keySize) {
+		return nil, nil, ErrMalformedSignature
+	}
+	r = big.NewInt(0).SetBytes(signature[:keySize])
+	s = big.NewInt(0).SetBytes(signature[keySize:])
+
+	return r, s, nil
+}
+
+func verifyEC(signature []byte, pub *ecdsa.PublicKey, h hash.Hash, keySize int) error {
+	sum := h.Sum(nil)
+	r, s, err := unpackSignature(signature, keySize)
+	if err != nil {
+		return err
+	}
+	if !ecdsa.Verify(pub, sum, r, s) {
+		return ErrECDSAVerification
+	}
+	return nil
+}
+
+func verify(signature []byte, pub crypto.PublicKey, h hash.Hash, keySize int) error {
+	switch epub := pub.(type) {
+	case *ecdsa.PublicKey:
+		return verifyEC(signature, epub, h, keySize)
+	}
+	return errors.New("unknown keytype")
+}
+
+func signEC(rand io.Reader, priv *ecdsa.PrivateKey, h hash.Hash, keySize int) ([]byte, error) {
+	sum := h.Sum(nil)
+
+	r, s, err := ecdsa.Sign(rand, priv, sum)
+	if err != nil {
+		return nil, err
+	}
+
+	return packSignature(r, s, keySize)
+}
+
+func sign(rand io.Reader, priv crypto.PrivateKey, h hash.Hash, keySize int) ([]byte, error) {
+	switch epriv := priv.(type) {
+	case *ecdsa.PrivateKey:
+		return signEC(rand, epriv, h, keySize)
+	}
+	return nil, errors.New("unknown keytype")
+}
+
+func validateEC(name string, priv *ecdsa.PrivateKey) error {
+	if priv.Params().Name != name {
+		return errors.New("invalid curve")
+	}
+	return nil
+}
+
+func validate(name string, priv interface{}) error {
+	switch epriv := priv.(type) {
+	case *ecdsa.PrivateKey:
+		return validateEC(name, epriv)
+	}
+	return errors.New("unknown keytype")
+}
+
+const (
+	es256KeySize = (256 + 7) / 8
+	es256Hash    = crypto.SHA256
+	es256Curve   = "P-256"
+
+	es384KeySize = (384 + 7) / 8
+	es384Hash    = crypto.SHA384
+	es384Curve   = "P-384"
+
+	es512KeySize = (521 + 7) / 8
+	es512Hash    = crypto.SHA512
+	es512Curve   = "P-521"
+)
+
+type es256 struct{ h hash.Hash }
+
+func NewES256A() jwa.JWA                                     { return es256{h: es256Hash.New()} }
+func AvailableES256() bool                                   { return es256Hash.Available() }
+func (es es256) Write(b []byte) (n int, err error)           { return es.h.Write(b) }
+func (es es256) Reset()                                      { es.h.Reset() }
+func (es es256) BlockSize() int                              { return es.h.BlockSize() }
+func (es es256) Size() int                                   { return es256KeySize * 2 }
+func (es es256) Validate(priv crypto.PrivateKey) (err error) { return validate(es256Curve, priv) }
+func (es es256) Sign(rand io.Reader, priv crypto.PrivateKey) (signature []byte, err error) {
+	return sign(rand, priv, es.h, es256KeySize)
+}
+func (es es256) Verify(signature []byte, pub crypto.PublicKey) (err error) {
+	return verify(signature, pub, es.h, es256KeySize)
+}
+
+type es384 struct{ h hash.Hash }
+
+func NewES384A() jwa.JWA                                     { return es384{h: es384Hash.New()} }
+func AvailableES384() bool                                   { return es384Hash.Available() }
+func (es es384) Write(b []byte) (n int, err error)           { return es.h.Write(b) }
+func (es es384) Reset()                                      { es.h.Reset() }
+func (es es384) BlockSize() int                              { return es.h.BlockSize() }
+func (es es384) Size() int                                   { return es384KeySize * 2 }
+func (es es384) Validate(priv crypto.PrivateKey) (err error) { return validate(es384Curve, priv) }
+func (es es384) Sign(rand io.Reader, priv crypto.PrivateKey) (signature []byte, err error) {
+	return sign(rand, priv, es.h, es384KeySize)
+}
+func (es es384) Verify(signature []byte, pub crypto.PublicKey) (err error) {
+	return verify(signature, pub, es.h, es384KeySize)
+}
+
+type es512 struct{ h hash.Hash }
+
+func NewES512A() jwa.JWA                                     { return es512{h: es512Hash.New()} }
+func AvailableES512() bool                                   { return es512Hash.Available() }
+func (es es512) Write(b []byte) (n int, err error)           { return es.h.Write(b) }
+func (es es512) Reset()                                      { es.h.Reset() }
+func (es es512) BlockSize() int                              { return es.h.BlockSize() }
+func (es es512) Size() int                                   { return es512KeySize * 2 }
+func (es es512) Validate(priv crypto.PrivateKey) (err error) { return validate(es512Curve, priv) }
+func (es es512) Sign(rand io.Reader, priv crypto.PrivateKey) (signature []byte, err error) {
+	return sign(rand, priv, es.h, es512KeySize)
+}
+func (es es512) Verify(signature []byte, pub crypto.PublicKey) (err error) {
+	return verify(signature, pub, es.h, es512KeySize)
 }
 
 /*

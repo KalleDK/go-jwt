@@ -84,12 +84,36 @@ func (s signer) KeyID() string {
 }
 
 var algorithms = make([]jwa.Algoritm, maxAlgorithm)
+var jwasAvailable = make([]func() bool, maxAlgorithm)
+var jwas = make([]func() jwa.JWA, maxAlgorithm)
+
+func RegisterJWA(alg Algorithm, f func() jwa.JWA, a func() bool) {
+	if alg >= maxAlgorithm {
+		panic("jwt: RegisterAlgorithm of unknown algorithm")
+	}
+	jwasAvailable[alg] = a
+	jwas[alg] = f
+}
 
 func RegisterAlgorithm(a Algorithm, alg jwa.Algoritm) {
 	if a >= maxAlgorithm {
 		panic("jwt: RegisterAlgorithm of unknown algorithm")
 	}
 	algorithms[a] = alg
+}
+
+func (a Algorithm) Available() bool {
+	return a < maxAlgorithm && jwas[a] != nil && jwasAvailable[a] != nil && jwasAvailable[a]()
+}
+
+func (a Algorithm) New() jwa.JWA {
+	if a > 0 && a < maxAlgorithm {
+		f := jwas[a]
+		if f != nil {
+			return f()
+		}
+	}
+	panic("jwt: requested algorithm #" + strconv.Itoa(int(a)) + " is unavailable")
 }
 
 func (a Algorithm) NewVerifier(kid string, key crypto.PublicKey) verifier {
