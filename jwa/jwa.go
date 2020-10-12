@@ -24,7 +24,7 @@ type JWA interface {
 	Sign(rand io.Reader, priv crypto.PrivateKey) (signature []byte, err error)
 	Verify(signature []byte, pub crypto.PublicKey) (err error)
 	Reset()
-	Size() int
+	Size(priv crypto.PrivateKey) int
 	BlockSize() int
 	Validate(priv crypto.PrivateKey) error
 }

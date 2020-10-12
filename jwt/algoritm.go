@@ -146,29 +146,14 @@ func (a Algorithm) String() string {
 		return "ES256"
 	case ES384:
 		return "ES384"
+	case RS512:
+		return "RS512"
+	case RS256:
+		return "RS256"
+	case RS384:
+		return "RS384"
 	default:
 		return "unknown algorithm value " + strconv.Itoa(int(a))
-	}
-}
-
-func (a Algorithm) SignatureSize() int {
-	switch a {
-	case RS256:
-		return 256 / 8
-	case RS384:
-		return 384 / 8
-	case RS512:
-		return 512 / 8
-	case ES512:
-		return 2 * ((521 + 7) / 8)
-	case ES256:
-		return 2 * ((256 + 7) / 8)
-	case ES384:
-		return 2 * ((384 + 7) / 8)
-	case None:
-		return 0
-	default:
-		return 0
 	}
 }
 

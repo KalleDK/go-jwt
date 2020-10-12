@@ -1,4 +1,4 @@
-package ecdsa
+package rsa
 
 import (
 	"testing"
@@ -9,5 +9,5 @@ import (
 )
 
 func Test_ECDSA(t *testing.T) {
-	test.TestAlgorithms(t, test.EC256, test.EC384, test.EC512)
+	test.TestAlgorithms(t, test.RS256, test.RS384, test.RS512)
 }

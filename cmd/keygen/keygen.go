@@ -4,7 +4,13 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"io"
+	"log"
 	"math/big"
 	"os"
 )
@@ -18,22 +24,6 @@ func (r noneReader) Read(b []byte) (int, error) {
 	return len(b), nil
 }
 
-type JWAKey struct {
-	Private     crypto.PrivateKey
-	PrivateCert string
-	Public      crypto.PublicKey
-	PublicCert  string
-}
-
-const jwaKeyStr = `
-type JWAKey struct {
-	Private     crypto.PrivateKey
-	PrivateCert string
-	Public      crypto.PublicKey
-	PublicCert  string
-}
-`
-
 func toInt(s string) *big.Int {
 	t, ok := new(big.Int).SetString(s, 10)
 	if !ok {
@@ -42,90 +32,73 @@ func toInt(s string) *big.Int {
 	return t
 }
 
-const toIntStr = `
-func toInt(s string) *big.Int {
-	t := &big.Int{}
-	t, ok := t.SetString(s, 10)
-	if !ok {
-		panic("invalid bigint")
+func printPriv(w io.Writer, priv crypto.PrivateKey) {
+	b, err := x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		log.Fatal(err)
 	}
-
-	return t
+	block := &pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: b,
+	}
+	err = pem.Encode(w, block)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
-`
 
-const publicKeyStr = `
-&ecdsa.PublicKey{
-	Curve: elliptic.%s(),
-	X:     toInt("%s"),
-	Y:     toInt("%s"),
+func printPub(w io.Writer, pub crypto.PublicKey) {
+	b, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		log.Fatal(err)
+	}
+	block := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: b,
+	}
+	err = pem.Encode(w, block)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
-`
 
-const privateKeyStr = `
-ecdsa.PublicKey{
-	Curve: elliptic.%s(),
-	X:     toInt("%s"),
-	Y:     toInt("%s"),
+func makeEC(w io.Writer, c elliptic.Curve) {
+	priv, _ := ecdsa.GenerateKey(c, noneReader{})
+
+	fmt.Println("===================================================")
+	fmt.Println("Curve: " + c.Params().Name)
+	fmt.Println("X: " + priv.X.String())
+	fmt.Println("Y: " + priv.Y.String())
+	fmt.Println("D: " + priv.D.String())
+
+	printPriv(w, priv)
+	printPub(w, &priv.PublicKey)
+
 }
-`
 
-const jwaStr = `JWAKey{
-	Public: &ecdsa.PublicKey{
-		Curve: elliptic.%[1]s(),
-		X:     toInt("%[2]s"),
-		Y:     toInt("%[3]s"),
-	},
-	PublicCert: ` + "`%[5]s`" + `,
-	Private: &ecdsa.PrivateKey{
-		PublicKey: ecdsa.PublicKey{
-			Curve: elliptic.%[1]s(),
-			X:     toInt("%[2]s"),
-			Y:     toInt("%[3]s"),
-		},
-		D: toInt("%[4]s"),
-	},
-	PrivateCert: ` + "`%[6]s`" + `,
-}`
+func makeRSA(w io.Writer, bits int) {
+	priv, _ := rsa.GenerateKey(rand.Reader, bits)
+	fmt.Println("===================================================")
+	fmt.Printf("Bits: %d\n", bits)
+	fmt.Printf("E: %d\n", priv.E)
+	fmt.Println("N: " + priv.N.String())
+	fmt.Println("D: " + priv.D.String())
+	fmt.Println("P0: " + priv.Primes[0].String())
+	fmt.Println("P1: " + priv.Primes[1].String())
+	fmt.Println("Dp: " + priv.Precomputed.Dp.String())
+	fmt.Println("Dq: " + priv.Precomputed.Dq.String())
+	fmt.Println("Qinv: " + priv.Precomputed.Qinv.String())
+
+	printPriv(w, priv)
+	printPub(w, &priv.PublicKey)
+
+}
 
 func main() {
-	fp := os.Stdout
-	fmt.Fprint(fp, jwaKeyStr)
-	fmt.Fprint(fp, toIntStr)
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), noneReader{})
-	if err != nil {
-		panic(err)
-	}
-	pub := priv.PublicKey
-	fmt.Printf(publicKeyStr, "P256", pub.X, pub.Y)
+	out := os.Stdout
+	//makeEC(out, elliptic.P256())
+	//makeEC(out, elliptic.P384())
+	//makeEC(out, elliptic.P521())
+	makeRSA(out, 640)
 
-	fmt.Printf(jwaStr, "P256", priv.X, priv.Y, priv.D,
-		`fds
-fdsa
-fd`,
-		`fdsfds
-dsfdsfdsfds
-fdsfdsfds`)
-
-	g := JWAKey{
-		Public: &ecdsa.PublicKey{
-			Curve: elliptic.P256(),
-			X:     toInt("48439561293906451759052585252797914202762949526041747995844080717082404635286"),
-			Y:     toInt("36134250956749795798585127919587881956611106672985015071877198253568414405109"),
-		},
-		PublicCert: `fds
-fdsa
-fd`,
-		Private: &ecdsa.PrivateKey{
-			PublicKey: ecdsa.PublicKey{
-				Curve: elliptic.P256(),
-				X:     toInt("48439561293906451759052585252797914202762949526041747995844080717082404635286"),
-				Y:     toInt("36134250956749795798585127919587881956611106672985015071877198253568414405109"),
-			},
-			D: toInt("1"),
-		},
-		PrivateCert: `fdsfds
-dsfdsfdsfds
-fdsfdsfds`,
-	}
 }

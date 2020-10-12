@@ -36,7 +36,8 @@ func MarshalWithHeader(rand io.Reader, payload interface{}, header Header, signe
 	}
 	payloadSize := len(payloadJSON)
 
-	signatureSize := int(signer.Algorithm().SignatureSize())
+	// ERROR
+	signatureSize := int(0)
 
 	token := newTokenBuffer(headerSize, payloadSize, signatureSize)
 
