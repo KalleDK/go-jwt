@@ -25,19 +25,24 @@ type keytest struct {
 	signatures map[string]string
 }
 
+type TestCollection struct {
+	alg   jwt.Algorithm
+	tests []keytest
+}
+
 var (
-	// EC256 list of tests for this algorithm
-	EC256 = []keytest{}
-	// EC384 list of tests for this algorithm
-	EC384 = []keytest{}
-	// EC512 list of tests for this algorithm
-	EC512 = []keytest{}
+	// ES256 list of tests for this algorithm
+	ES256 = TestCollection{alg: jwt.ES256}
+	// ES384 list of tests for this algorithm
+	ES384 = TestCollection{alg: jwt.ES384}
+	// ES512 list of tests for this algorithm
+	ES512 = TestCollection{alg: jwt.ES512}
 	// RS256 list of tests for this algorithm
-	RS256 = []keytest{}
+	RS256 = TestCollection{alg: jwt.RS256}
 	// RS384 list of tests for this algorithm
-	RS384 = []keytest{}
+	RS384 = TestCollection{alg: jwt.RS384}
 	// RS512 list of tests for this algorithm
-	RS512 = []keytest{}
+	RS512 = TestCollection{alg: jwt.RS512}
 )
 
 func init() {
@@ -50,9 +55,9 @@ func init() {
 			pubCert:  ecPublicKeyCert[curve],
 		}
 		signatures := ecSignatures[curve]
-		EC256 = append(EC256, keytest{keyset: keyset, alg: jwt.ES256, text: text, signatures: signatures[jwt.ES256]})
-		EC384 = append(EC384, keytest{keyset: keyset, alg: jwt.ES384, text: text, signatures: signatures[jwt.ES384]})
-		EC512 = append(EC512, keytest{keyset: keyset, alg: jwt.ES512, text: text, signatures: signatures[jwt.ES512]})
+		ES256.tests = append(ES256.tests, keytest{keyset: keyset, alg: jwt.ES256, text: text, signatures: signatures[jwt.ES256]})
+		ES384.tests = append(ES384.tests, keytest{keyset: keyset, alg: jwt.ES384, text: text, signatures: signatures[jwt.ES384]})
+		ES512.tests = append(ES512.tests, keytest{keyset: keyset, alg: jwt.ES512, text: text, signatures: signatures[jwt.ES512]})
 	}
 
 	for bits := range rsaPrivateKey {
@@ -66,9 +71,9 @@ func init() {
 		}
 
 		signatures := rsaSignatures[bits]
-		RS256 = append(RS256, keytest{keyset: keyset, alg: jwt.RS256, text: text, signatures: signatures[jwt.RS256]})
-		RS384 = append(RS384, keytest{keyset: keyset, alg: jwt.RS384, text: text, signatures: signatures[jwt.RS384]})
-		RS512 = append(RS512, keytest{keyset: keyset, alg: jwt.RS512, text: text, signatures: signatures[jwt.RS512]})
+		RS256.tests = append(RS256.tests, keytest{keyset: keyset, alg: jwt.RS256, text: text, signatures: signatures[jwt.RS256]})
+		RS384.tests = append(RS384.tests, keytest{keyset: keyset, alg: jwt.RS384, text: text, signatures: signatures[jwt.RS384]})
+		RS512.tests = append(RS512.tests, keytest{keyset: keyset, alg: jwt.RS512, text: text, signatures: signatures[jwt.RS512]})
 	}
 }
 
