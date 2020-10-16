@@ -2,6 +2,7 @@ package jwt
 
 import (
 	"crypto"
+	"errors"
 	"io"
 	"strconv"
 
@@ -12,8 +13,9 @@ import (
 type Algorithm uint8
 
 const (
+	Invalid Algorithm = 0 + iota
 	// None is a token without a signature
-	None Algorithm = 1 + iota
+	None
 	// ES256 ECDSA P-256 and SHA-256
 	ES256
 	// ES384 ECDSA P-384 with SHA-384
@@ -102,6 +104,14 @@ func RegisterAlgorithm(a Algorithm, alg jwa.Algoritm) {
 	algorithms[a] = alg
 }
 
+func (a Algorithm) ValidateSignerKey(key crypto.PrivateKey) error {
+	return a.New().Validate(key)
+}
+
+func (a Algorithm) ValidateVerifierKey(key crypto.PublicKey) error {
+	return nil
+}
+
 func (a Algorithm) Available() bool {
 	return a < maxAlgorithm && jwas[a] != nil && jwasAvailable[a] != nil && jwasAvailable[a]()
 }
@@ -134,6 +144,25 @@ func (a Algorithm) NewSigner(kid string, key crypto.PrivateKey) signer {
 		}
 	}
 	panic("jwt: requested algorithm #" + strconv.Itoa(int(a)) + " is unavailable")
+}
+
+func (a Algorithm) IsValid() bool {
+	return Invalid < a && a < maxAlgorithm
+}
+
+func (a *Algorithm) UnmarshalText(text []byte) error {
+	*a = GetAlgorithm(string(text))
+	if !a.IsValid() {
+		return errors.New("invalid algoritm " + string(text) + " " + a.String())
+	}
+	return nil
+}
+
+func (a Algorithm) MarshalText() (text []byte, err error) {
+	if !a.IsValid() {
+		return nil, errors.New("invalid algorithm " + strconv.FormatUint(uint64(uint8(a)), 10))
+	}
+	return []byte(a.String()), nil
 }
 
 func (a Algorithm) String() string {

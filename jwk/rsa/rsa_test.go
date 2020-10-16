@@ -16,7 +16,7 @@ type JWKFixture = test.JWKFixture
 
 func TestRSKeys(t *testing.T) {
 	tests := []KeyTest{
-		KeyTest{
+		{
 			Name: "RS256",
 			Args: JWKFixture{
 				KeyID:     "2011-04-29",

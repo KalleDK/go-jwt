@@ -120,6 +120,12 @@ func (es es256) Reset()                                      { es.h.Reset() }
 func (es es256) BlockSize() int                              { return es.h.BlockSize() }
 func (es es256) Size(priv crypto.PrivateKey) int             { return es256KeySize * 2 }
 func (es es256) Validate(priv crypto.PrivateKey) (err error) { return validate(es256Curve, priv) }
+func (es es256) SignEC(rand io.Reader, priv *ecdsa.PrivateKey) (signature []byte, err error) {
+	return signEC(rand, priv, es.h, es256KeySize)
+}
+func (es es256) VerifyEC(signature []byte, pub *ecdsa.PublicKey) (err error) {
+	return verifyEC(signature, pub, es.h, es256KeySize)
+}
 func (es es256) Sign(rand io.Reader, priv crypto.PrivateKey) (signature []byte, err error) {
 	return sign(rand, priv, es.h, es256KeySize)
 }
@@ -150,6 +156,12 @@ func (es es384) Reset()                                      { es.h.Reset() }
 func (es es384) BlockSize() int                              { return es.h.BlockSize() }
 func (es es384) Size(priv crypto.PrivateKey) int             { return es384KeySize * 2 }
 func (es es384) Validate(priv crypto.PrivateKey) (err error) { return validate(es384Curve, priv) }
+func (es es384) SignEC(rand io.Reader, priv *ecdsa.PrivateKey) (signature []byte, err error) {
+	return signEC(rand, priv, es.h, es384KeySize)
+}
+func (es es384) VerifyEC(signature []byte, pub *ecdsa.PublicKey) (err error) {
+	return verifyEC(signature, pub, es.h, es384KeySize)
+}
 func (es es384) Sign(rand io.Reader, priv crypto.PrivateKey) (signature []byte, err error) {
 	return sign(rand, priv, es.h, es384KeySize)
 }
@@ -180,6 +192,12 @@ func (es es512) Reset()                                      { es.h.Reset() }
 func (es es512) BlockSize() int                              { return es.h.BlockSize() }
 func (es es512) Size(priv crypto.PrivateKey) int             { return es512KeySize * 2 }
 func (es es512) Validate(priv crypto.PrivateKey) (err error) { return validate(es512Curve, priv) }
+func (es es512) SignEC(rand io.Reader, priv *ecdsa.PrivateKey) (signature []byte, err error) {
+	return signEC(rand, priv, es.h, es512KeySize)
+}
+func (es es512) VerifyEC(signature []byte, pub *ecdsa.PublicKey) (err error) {
+	return verifyEC(signature, pub, es.h, es512KeySize)
+}
 func (es es512) Sign(rand io.Reader, priv crypto.PrivateKey) (signature []byte, err error) {
 	return sign(rand, priv, es.h, es512KeySize)
 }
