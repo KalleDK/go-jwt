@@ -1,77 +1,91 @@
 package jwk
 
 import (
-	"encoding/json"
 	"errors"
-	"io"
+	"strconv"
 
-	"github.com/KalleDK/go-jwt/jwa"
 	"github.com/KalleDK/go-jwt/jwt"
 )
 
-type signer struct {
-	signer jwa.Signer
-	alg    jwt.Algorithm
-	kid    string
+type KeyBase struct {
+	Kid string        `json:"kid,omitempty"`
+	Alg jwt.Algorithm `json:"alg"`
 }
 
-func (s signer) Sign(rand io.Reader, unsigned []byte) (signature []byte, err error) {
-	return s.signer.Sign(rand, unsigned)
+func (k KeyBase) Algorithm() jwt.Algorithm { return k.Alg }
+func (k KeyBase) KeyID() string            { return k.Kid }
+func (k KeyBase) Available() bool          { return k.Alg.Available() }
+
+type KeyParser interface {
+	ParseSigner(base KeyBase, b []byte) (jwt.Signer, error)
+	ParseVerifier(base KeyBase, b []byte) (jwt.Verifier, error)
+	ParseEncryptor(base KeyBase, b []byte) (jwt.Encryptor, error)
+	ParseDecryptor(base KeyBase, b []byte) (jwt.Decryptor, error)
 }
 
-func (s signer) Algorithm() jwt.Algorithm {
-	return s.alg
+const (
+	// InvalidKeytype is used to make sure a value can be invalid
+	InvalidKeytype KeyType = iota
+	// EC is Elliptic Curve
+	EC
+	// RSA is RSA
+	RSA
+	// OCT is Octet Sequence
+	OCT
+
+	maxKeyTypes
+)
+
+var keyTypes = make([]KeyParser, maxKeyTypes)
+
+func RegisterKeyParser(k KeyType, p KeyParser) {
+	if k <= 0 || maxKeyTypes <= k {
+		panic("jwt: RegisterKeyType of unknown key type")
+	}
+	keyTypes[k] = p
 }
 
-func (s signer) KeyID() string {
-	return s.kid
-}
-
-func (s signer) MarshalJSON() ([]byte, error) {
-	return nil, nil
-}
-
-type jwkheader struct {
-	KeyType string   `json:"kty"`
-	KeyID   string   `json:"kid"`
-	KeyOps  []string `json:"key_ops"`
-}
-
-func isin(k string, s []string) bool {
-	for _, v := range s {
-		if k == v {
-			return true
+func getKeyParser(k KeyType) (p KeyParser, err error) {
+	if 0 < k && k < maxKeyTypes {
+		f := keyTypes[k]
+		if f != nil {
+			return f, nil
 		}
 	}
-	return false
+	return nil, errors.New("jwt: requested key type #" + strconv.Itoa(int(k)) + " is unavailable")
 }
 
-func ParseSigner(b []byte) (signer jwt.Signer, err error) {
-	var header jwkheader
-	if err = json.Unmarshal(b, &header); err != nil {
+func parseBase(b []byte) (KeyType, KeyBase, error) {
+	kb := KeyBase{}
+
+	kt := func() KeyType {
+		switch kb.Alg {
+		case jwt.RS256:
+			fallthrough
+		case jwt.RS384:
+			fallthrough
+		case jwt.RS512:
+			return RSA
+		case jwt.ES256:
+			fallthrough
+		case jwt.ES384:
+			fallthrough
+		case jwt.ES512:
+			return EC
+		default:
+			return InvalidKeytype
+		}
+	}()
+
+	return kt, kb, nil
+}
+
+func ParseSigner(b []byte) (jwt.Signer, error) {
+	kt, base, err := parseBase(b)
+	if err != nil {
 		return nil, err
 	}
 
-	if !isin("sign", header.KeyOps) {
-		return nil, errors.New("jwk is not a signer")
-	}
+	return kt.ParseSigner(base, b)
 
-	keytype := jwt.GetKeyType(header.KeyType)
-
-	return keytype.ParseSigner(header.KeyID, b)
-}
-
-func ParseVerifier(b []byte) (verifier jwt.Verifier, err error) {
-	var header jwkheader
-	if err = json.Unmarshal(b, &header); err != nil {
-		return nil, err
-	}
-
-	if !isin("verify", header.KeyOps) {
-		return nil, errors.New("jwk is not a verifier")
-	}
-
-	keytype := jwt.GetKeyType(header.KeyType)
-
-	return keytype.ParseVerifier(header.KeyID, b)
 }

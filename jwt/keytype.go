@@ -13,8 +13,9 @@ type KeyParser interface {
 type KeyType uint8
 
 const (
+	InvalidKeytype KeyType = iota
 	// Elliptic Curve
-	EC KeyType = 1 + iota
+	EC
 	// RSA
 	RSA
 	// Octet Sequence
@@ -58,6 +59,38 @@ func (k KeyType) ParseVerifier(kid string, b []byte) (Verifier, error) {
 	}
 
 	return f.ParseVerifier(kid, b)
+}
+
+func (k KeyType) IsValid() bool {
+	return InvalidKeytype < k && k < maxKeyTypes
+}
+
+func (k *KeyType) UnmarshalText(text []byte) error {
+	*k = GetKeyType(string(text))
+	if !k.IsValid() {
+		return errors.New("invalid keytype: " + string(text))
+	}
+	return nil
+}
+
+func (k KeyType) MarshalText() (text []byte, err error) {
+	if !k.IsValid() {
+		return nil, errors.New("invalid algorithm: " + k.String())
+	}
+	return []byte(k.String()), nil
+}
+
+func (k KeyType) String() string {
+	switch k {
+	case EC:
+		return "EC"
+	case RSA:
+		return "RSA"
+	case OCT:
+		return "oct"
+	default:
+		return "unknown keytype value " + strconv.Itoa(int(k))
+	}
 }
 
 func GetKeyType(s string) KeyType {

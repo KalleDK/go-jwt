@@ -29,6 +29,9 @@ const (
 	maxAlgorithm
 )
 
+type Decryptor interface{}
+type Encryptor interface{}
+
 type Verifier interface {
 	Verify(a Algorithm, kidSuggest string, signed, signature []byte) (kidUsed string, err error)
 	Algorithm() Algorithm
